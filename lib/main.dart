@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const IostecClientesApp());
@@ -78,24 +80,8 @@ class BienvenidaPage extends StatelessWidget {
                     child: const Text('CREAR MI CUENTA'),
                   ),
                 ),
-                const SizedBox(height: 15),
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegistroPage(),
-                        ),
-                      );
-                    },
-                    child: const Text('INICIAR SESIÓN'),
-                  ),
-                ),
                 const SizedBox(height: 30),
-                const Text('Soporte técnico por WhatsApp'),
+                const Text('Soporte técnico IOSTEC'),
               ],
             ),
           ),
@@ -104,6 +90,7 @@ class BienvenidaPage extends StatelessWidget {
     );
   }
 }
+
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key});
 
@@ -116,6 +103,8 @@ class _RegistroPageState extends State<RegistroPage> {
   final apellido = TextEditingController();
   final telefono = TextEditingController();
 
+  bool cargando = false;
+
   @override
   void dispose() {
     nombre.dispose();
@@ -124,23 +113,61 @@ class _RegistroPageState extends State<RegistroPage> {
     super.dispose();
   }
 
-  void continuar() {
+  Future<void> crearCuenta() async {
     if (nombre.text.trim().isEmpty ||
         apellido.text.trim().isEmpty ||
         telefono.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Completa todos los campos para continuar'),
+          content: Text('Completa todos los campos'),
         ),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Datos completados. Verificación pendiente.'),
-      ),
-    );
+    setState(() => cargando = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString('cliente_nombre', nombre.text.trim());
+      await prefs.setString('cliente_apellido', apellido.text.trim());
+      await prefs.setString('cliente_telefono', telefono.text.trim());
+      await prefs.setBool('cuenta_creada', true);
+
+      if (!mounted) return;
+
+      setState(() => cargando = false);
+
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('¡Bienvenido a IOSTEC!'),
+          content: const Text(
+            'Tu cuenta fue creada correctamente.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Navigator.pop(context);
+              },
+              child: const Text('ACEPTAR'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => cargando = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo guardar la cuenta. Intenta nuevamente.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -171,7 +198,7 @@ class _RegistroPageState extends State<RegistroPage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Registra tus datos para crear tu cuenta.',
+                'Completa tus datos para crear tu cuenta.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
@@ -207,8 +234,10 @@ class _RegistroPageState extends State<RegistroPage> {
               SizedBox(
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: continuar,
-                  child: const Text('CONTINUAR'),
+                  onPressed: cargando ? null : crearCuenta,
+                  child: cargando
+                      ? const CircularProgressIndicator()
+                      : const Text('CREAR MI CUENTA'),
                 ),
               ),
             ],
