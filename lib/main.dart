@@ -23,8 +23,51 @@ class IostecClientesApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const BienvenidaPage(),
+      home: const InicioPage(),
     );
+  }
+}
+
+class InicioPage extends StatefulWidget {
+  const InicioPage({super.key});
+
+  @override
+  State<InicioPage> createState() => _InicioPageState();
+}
+
+class _InicioPageState extends State<InicioPage> {
+  bool cargando = true;
+  bool registrada = false;
+
+  @override
+  void initState() {
+    super.initState();
+    comprobarCuenta();
+  }
+
+  Future<void> comprobarCuenta() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existe = prefs.getBool('cuenta_creada') ?? false;
+
+    if (!mounted) return;
+
+    setState(() {
+      registrada = existe;
+      cargando = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (cargando) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return registrada
+        ? const PrincipalPage()
+        : const BienvenidaPage();
   }
 }
 
@@ -57,9 +100,9 @@ class BienvenidaPage extends StatelessWidget {
                 ),
                 const Text(
                   'ASISTENCIA TÉCNICA',
-                  style: TextStyle(fontSize: 14, letterSpacing: 4),
+                  style: TextStyle(letterSpacing: 4),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 20),
                 const Text(
                   'Tu celular siempre en buenas manos.',
                   textAlign: TextAlign.center,
@@ -80,8 +123,6 @@ class BienvenidaPage extends StatelessWidget {
                     child: const Text('CREAR MI CUENTA'),
                   ),
                 ),
-                const SizedBox(height: 30),
-                const Text('Soporte técnico IOSTEC'),
               ],
             ),
           ),
@@ -137,25 +178,12 @@ class _RegistroPageState extends State<RegistroPage> {
 
       if (!mounted) return;
 
-      setState(() => cargando = false);
-
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('¡Bienvenido a IOSTEC!'),
-          content: const Text(
-            'Tu cuenta fue creada correctamente.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.pop(context);
-              },
-              child: const Text('ACEPTAR'),
-            ),
-          ],
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const PrincipalPage(),
         ),
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
@@ -164,7 +192,7 @@ class _RegistroPageState extends State<RegistroPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudo guardar la cuenta. Intenta nuevamente.'),
+          content: Text('Error al guardar los datos'),
         ),
       );
     }
@@ -173,9 +201,7 @@ class _RegistroPageState extends State<RegistroPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crear mi cuenta'),
-      ),
+      appBar: AppBar(title: const Text('Crear mi cuenta')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(25),
@@ -195,11 +221,6 @@ class _RegistroPageState extends State<RegistroPage> {
                   fontSize: 25,
                   fontWeight: FontWeight.bold,
                 ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Completa tus datos para crear tu cuenta.',
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
               TextField(
@@ -243,6 +264,181 @@ class _RegistroPageState extends State<RegistroPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class PrincipalPage extends StatefulWidget {
+  const PrincipalPage({super.key});
+
+  @override
+  State<PrincipalPage> createState() => _PrincipalPageState();
+}
+
+class _PrincipalPageState extends State<PrincipalPage> {
+  String nombre = '';
+  String apellido = '';
+  String telefono = '';
+
+  @override
+  void initState() {
+    super.initState();
+    cargarDatos();
+  }
+
+  Future<void> cargarDatos() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (!mounted) return;
+
+    setState(() {
+      nombre = prefs.getString('cliente_nombre') ?? '';
+      apellido = prefs.getString('cliente_apellido') ?? '';
+      telefono = prefs.getString('cliente_telefono') ?? '';
+    });
+  }
+
+  void mostrarOpcion(String titulo) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$titulo: próximamente en IOSTEC'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'IOSTEC CLIENTES',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Icon(
+              Icons.phone_iphone,
+              color: Color(0xFF168BFF),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 15),
+              const Icon(
+                Icons.account_circle,
+                size: 75,
+                color: Color(0xFF168BFF),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                '¡Hola, $nombre!',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Bienvenido a tu espacio de cliente.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 35),
+              opcion(
+                Icons.phone_android,
+                'Mis reparaciones',
+                'Consulta el estado de tus reparaciones.',
+                () => mostrarOpcion('Mis reparaciones'),
+              ),
+              opcion(
+                Icons.history,
+                'Mi historial',
+                'Consulta tus servicios anteriores.',
+                () => mostrarOpcion('Mi historial'),
+              ),
+              opcion(
+                Icons.support_agent,
+                'Soporte técnico',
+                'Contacta con el equipo IOSTEC.',
+                () => mostrarOpcion('Soporte técnico'),
+              ),
+              opcion(
+                Icons.person,
+                'Mi perfil',
+                'Consulta tus datos personales.',
+                () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Mi perfil'),
+                      content: Text(
+                        'Nombre: $nombre\n'
+                        'Apellido: $apellido\n'
+                        'Teléfono: $telefono',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('CERRAR'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 35),
+              const Text(
+                'IOSTEC ASISTENCIA TÉCNICA',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF168BFF),
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Tu celular siempre en buenas manos.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget opcion(
+    IconData icono,
+    String titulo,
+    String descripcion,
+    VoidCallback accion,
+  ) {
+    return Card(
+      color: const Color(0xFF102C50),
+      margin: const EdgeInsets.only(bottom: 15),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(15),
+        leading: Icon(
+          icono,
+          color: const Color(0xFF168BFF),
+          size: 32,
+        ),
+        title: Text(
+          titulo,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(descripcion),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 17),
+        onTap: accion,
       ),
     );
   }
